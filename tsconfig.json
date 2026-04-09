@@ -7,7 +7,7 @@
 
     // Environment Settings
     // See also https://aka.ms/tsconfig/module
-    "module": "nodenext",
+    "module": "es2015",
     "target": "esnext",
     "types": ["node"],
     // For nodejs:
@@ -39,7 +39,9 @@
     "isolatedModules": true,
     "noUncheckedSideEffectImports": true,
     "moduleDetection": "force",
+    "moduleResolution": "bundler",
     "skipLibCheck": true,
+    "allowImportingTsExtensions": true
   },
   "include": ["src/**/*"]
 }
