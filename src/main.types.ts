@@ -1,0 +1,1 @@
+export type SkuEntry = { Type: string; SKU: string };
