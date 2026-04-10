@@ -34,7 +34,7 @@ chromium.use(stealth());
             const promises = batch.map(async sku => {
                 const output = await processSku(browser as Browser, sku);
                 if (output) {
-                    data.push(output);
+                    data.push(output!);
                 }
             });
 
@@ -63,7 +63,7 @@ async function processSku(browser: Browser, entry: SkuEntry) {
     const page = await browser.newPage();
 
     try {
-        let data;
+        let data: ProductData | null = null;
 
         if (entry.Type === 'Amazon') {
             data = await retryLogic(() => scrapFromAmazon(page, entry.SKU));
@@ -74,6 +74,7 @@ async function processSku(browser: Browser, entry: SkuEntry) {
         else {
             errorLogger(`Wrong SKU type = ${entry.Type} for SKU: ${entry.SKU}`);
             consoleLogger(chalk.white.bgRed(`Wrong SKU type = ${entry.Type} for SKU: ${entry.SKU}`));
+            return null;
         }
 
         return data
@@ -90,7 +91,7 @@ async function processSku(browser: Browser, entry: SkuEntry) {
 }
 
 function retryLogic<T>(callback: () => Promise<T>, retryCount: number = 3, delay: number = 2000) {
-    return new Promise((resolve, reject) => {
+    return new Promise<T>((resolve, reject) => {
         let attempts = 0;
 
         const attempt = () => {
@@ -111,7 +112,7 @@ function retryLogic<T>(callback: () => Promise<T>, retryCount: number = 3, delay
     });
 }
 
-async function scrapFromAmazon(page: Page, sku: string) {
+export async function scrapFromAmazon(page: Page, sku: string) {
     try {
         consoleLogger(chalk.blue(`Scraping Amazon for SKU: ${sku} started`));
         const response = await page.goto(`https://www.amazon.in/dp/${sku}`, { waitUntil: 'domcontentloaded', timeout: 30000 });
@@ -128,11 +129,11 @@ async function scrapFromAmazon(page: Page, sku: string) {
         }
 
         // READING DATA
-        const title = await page.locator('span#productTitle').innerText();
+        const title = await page.locator('span#productTitle').innerText().then(t => t.trim());
         const wholePrice = await page.locator('.apex-core-price-identifier span.apex-pricetopay-value.priceToPay span.a-price-symbol').innerText().catch(() => "") + await page.locator('.apex-core-price-identifier span.apex-pricetopay-value.priceToPay span.a-price-whole').innerText().catch(() => "");
         const fractionPrice = await page.locator('.apex-core-price-identifier span.apex-pricetopay-value.priceToPay span.a-price-fraction').innerText().catch(() => "");
         const price = `${wholePrice}${fractionPrice}`.replace(/[^0-9,.]/g, "").trim();
-        const description = await page.locator('#feature-bullets ul').innerText();
+        const description = await page.locator('#feature-bullets ul').innerText().then(t => t.trim());
         const reviewsAndRating = await page.locator('#averageCustomerReviews_feature_div #averageCustomerReviews #acrCustomerReviewLink #acrCustomerReviewText').innerText();
 
         consoleLogger(chalk.blue(`Scraping Amazon for SKU: ${sku} completed`));
@@ -152,7 +153,7 @@ async function scrapFromAmazon(page: Page, sku: string) {
     }
 }
 
-async function scrapFromWalmart(page: Page, sku: string) {
+export async function scrapFromWalmart(page: Page, sku: string) {
     try {
         const response = await page.goto(`https://www.walmart.com/ip/${sku}`, { waitUntil: 'domcontentloaded', timeout: 30000 });
 
